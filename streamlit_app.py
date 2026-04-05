@@ -13,7 +13,7 @@ st.markdown("""
     .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
     .stAlert { border-radius: 10px; }
     </style>
-    """, unsafe_allow_status_code=True)
+    """, unsafe_allow_html=True) # <-- AQUÍ ESTABA EL ERROR, YA LO CORREGÍ
 
 # 2. CONEXIÓN A GOOGLE SHEETS
 # Usa las credenciales configuradas en los Secrets de Streamlit
