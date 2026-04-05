@@ -16,8 +16,16 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 # Función para leer datos
 def load_data(sheet_name):
-    # Esto obliga al sistema a buscar la pestaña exacta
-    return conn.read(worksheet=sheet_name, ttl="0")
+    try:
+        # Intentamos leer. Si no hay datos, creamos una tabla vacía con las columnas
+        df = conn.read(worksheet=sheet_name, ttl=0)
+        if df is None or df.empty:
+            return pd.DataFrame()
+        return df
+    except Exception as e:
+        # Si falla, no rompemos la app, solo avisamos
+        st.sidebar.error(f"Esperando conexión con pestaña {sheet_name}...")
+        return pd.DataFrame()
 
 # --- MENÚ LATERAL ---
 st.sidebar.image("https://via.placeholder.com/150", caption="FISIOCARE") # Aquí pondremos tu logo luego
