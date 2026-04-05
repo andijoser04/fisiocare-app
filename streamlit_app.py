@@ -17,14 +17,11 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # Función para leer datos
 def load_data(sheet_name):
     try:
-        # Intentamos leer. Si no hay datos, creamos una tabla vacía con las columnas
-        df = conn.read(worksheet=sheet_name, ttl=0)
-        if df is None or df.empty:
-            return pd.DataFrame()
-        return df
+        # Intentamos leer la pestaña
+        return conn.read(worksheet=sheet_name, ttl=0)
     except Exception as e:
-        # Si falla, no rompemos la app, solo avisamos
-        st.sidebar.error(f"Esperando conexión con pestaña {sheet_name}...")
+        # ¡ESTO ES LO IMPORTANTE! Ahora nos dirá el error real en la barrita roja
+        st.sidebar.error(f"Error real en {sheet_name}: {e}")
         return pd.DataFrame()
 
 # --- MENÚ LATERAL ---
