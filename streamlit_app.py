@@ -65,7 +65,7 @@ def load_data(sheet_name):
 
 # 3. LOGO Y SIDEBAR
 # Nota: Reemplaza este link por el link de tu logo real
-LOGO_URL = "https://ibb.co/kgdpDqP5"
+LOGO_URL = "https://drive.google.com/file/d/1yXF9BrRGA2krLyDezSvsPkkbfCOSvgfQ/view?usp=sharing"
 
 st.logo(LOGO_URL, icon_image=LOGO_URL)
 st.sidebar.image(LOGO_URL, width=120)
