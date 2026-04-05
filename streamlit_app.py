@@ -16,7 +16,8 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 
 # Función para leer datos
 def load_data(sheet_name):
-    return conn.read(worksheet=sheet_name)
+    # Esto obliga al sistema a buscar la pestaña exacta
+    return conn.read(worksheet=sheet_name, ttl="0")
 
 # --- MENÚ LATERAL ---
 st.sidebar.image("https://via.placeholder.com/150", caption="FISIOCARE") # Aquí pondremos tu logo luego
