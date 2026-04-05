@@ -64,13 +64,12 @@ def load_data(sheet_name):
         return pd.DataFrame()
 
 # 3. LOGO Y SIDEBAR
-# Nota: Reemplaza este link por el link de tu logo real
-LOGO_URL = "https://drive.google.com/uc?export=download&id=1yXF9BrRGA2krLyDezSvsPkkbfCOSvgfQ"
+# Solo pon el nombre exacto de cómo subiste la imagen a GitHub
+LOGO_URL = "LOGO (2).png"  # Cambia .png a .jpg si tu foto es jpg
 
 st.logo(LOGO_URL, icon_image=LOGO_URL)
 st.sidebar.image(LOGO_URL, width=120)
 st.sidebar.title("FISIOCARE")
-st.sidebar.markdown("*Centro de Fisioterapia y Rehabilitacion*")
 
 menu = st.sidebar.selectbox(
     "Navegación Principal",
