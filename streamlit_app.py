@@ -65,12 +65,12 @@ def load_data(sheet_name):
 
 # 3. LOGO Y SIDEBAR
 # Nota: Reemplaza este link por el link de tu logo real
-LOGO_URL = "https://cdn-icons-png.flaticon.com/512/3063/3063176.png"
+LOGO_URL = "https://ibb.co/kgdpDqP5"
 
 st.logo(LOGO_URL, icon_image=LOGO_URL)
 st.sidebar.image(LOGO_URL, width=120)
 st.sidebar.title("FISIOCARE")
-st.sidebar.markdown("*Gestión Terapéutica Inteligente*")
+st.sidebar.markdown("*Centro de Fisioterapia y Rehabilitacion*")
 
 menu = st.sidebar.selectbox(
     "Navegación Principal",
