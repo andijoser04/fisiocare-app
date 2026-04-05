@@ -3,108 +3,122 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime, timedelta
 
-# Configuración de la página
-st.set_page_config(page_title="FISIOCARE - Sistema de Gestión", layout="wide")
+# 1. CONFIGURACIÓN DE LA PÁGINA
+st.set_page_config(page_title="FISIOCARE - Gestión Integral", layout="wide", page_icon="🏥")
 
-# --- TÍTULO Y LOGO ---
-st.title("🏥 Sistema de Gestión FISIOCARE")
-st.markdown("---")
+# --- ESTILOS PERSONALIZADOS ---
+st.markdown("""
+    <style>
+    .main { background-color: #f5f7f9; }
+    .stButton>button { width: 100%; border-radius: 5px; height: 3em; background-color: #007bff; color: white; }
+    .stAlert { border-radius: 10px; }
+    </style>
+    """, unsafe_allow_status_code=True)
 
-# --- CONEXIÓN A GOOGLE SHEETS ---
-# Asegúrate de configurar st.secrets con tu URL de Google Sheet
+# 2. CONEXIÓN A GOOGLE SHEETS
+# Usa las credenciales configuradas en los Secrets de Streamlit
 conn = st.connection("gsheets", type=GSheetsConnection)
 
-# Función para leer datos
 def load_data(sheet_name):
     try:
-        # Usamos la conexión de Streamlit tal cual, sin trucos extras
         return conn.read(worksheet=sheet_name, ttl=0)
     except Exception as e:
-        # Si falla, nos dirá el error aquí
-        st.sidebar.error(f"Error en {sheet_name}: {e}")
+        st.error(f"Error al conectar con la pestaña {sheet_name}: {e}")
         return pd.DataFrame()
 
-# Añade esta funcioncita abajo de load_data para ayudar al sistema
-def get_gid(name):
-    gids = {"Agenda": "0", "Pacientes": "1942180802", "Paquetes": "12345678"} # El gid sale de la URL de cada pestaña
-    return gids.get(name, "0")
-# --- MENÚ LATERAL ---
-st.sidebar.image("https://via.placeholder.com/150", caption="FISIOCARE") # Aquí pondremos tu logo luego
+# 3. MENÚ LATERAL
+st.sidebar.title("🏥 FISIOCARE")
+st.sidebar.markdown("---")
 menu = st.sidebar.radio(
-    "Seleccione una sección:",
+    "Navegación",
     ["📅 Agenda Diaria", "📦 Gestión de Paquetes", "👤 Registro de Pacientes"]
 )
 
-# --- LÓGICA DE SECCIONES ---
+# --- LÓGICA DE LAS SECCIONES ---
 
-# 1. REGISTRO DE PACIENTES
+# A. REGISTRO DE PACIENTES
 if menu == "👤 Registro de Pacientes":
-    st.header("Registrar Nuevo Paciente")
-    with st.form("form_paciente"):
-        dni = st.text_input("DNI del Paciente")
-        nombre = st.text_input("Nombre Completo")
-        celular = st.text_input("Celular (con código de país)")
-        diagnostico = st.text_area("Diagnóstico Inicial")
-        color = st.selectbox("Asignar Color/Prioridad", ["Verde", "Amarillo", "Rojo"])
-        
-        submitted = st.form_submit_button("Guardar Paciente")
-        if submitted:
-            # Aquí iría la lógica para hacer el append al Google Sheet
-            st.success(f"Paciente {nombre} registrado con éxito (Simulado).")
-
-# 2. GESTIÓN DE PAQUETES
-elif menu == "📦 Gestión de Paquetes":
-    st.header("Seguimiento de Paquetes de Sesiones")
-    st.info("Los paquetes vencen automáticamente a los 90 días de la compra.")
+    st.header("👤 Registro de Nuevos Pacientes")
+    st.write("Complete los datos para añadir un paciente a la base de datos de FISIOCARE.")
     
-    # Cargar datos de paquetes (Simulado)
+    with st.form("nuevo_paciente", clear_on_submit=True):
+        col1, col2 = st.columns(2)
+        with col1:
+            dni = st.text_input("DNI / CE")
+            nombre = st.text_input("Nombre Completo")
+        with col2:
+            celular = st.text_input("Celular (Ej: +51999888777)")
+            color_prio = st.selectbox("Prioridad/Color", ["Verde", "Amarillo", "Rojo"])
+        
+        diagnostico = st.text_area("Diagnóstico Inicial")
+        
+        submit = st.form_submit_button("Guardar Paciente")
+        
+        if submit:
+            if dni and nombre:
+                # Aquí se añadiría la lógica de conn.update para escribir en el Excel
+                st.success(f"✅ Paciente {nombre} listo para ser guardado en la base de datos.")
+            else:
+                st.error("⚠️ Por favor, complete DNI y Nombre.")
+
+# B. GESTIÓN DE PAQUETES
+elif menu == "📦 Gestión de Paquetes":
+    st.header("📦 Control de Paquetes y Sesiones")
+    st.info("💡 Los paquetes expiran automáticamente a los 90 días de la compra.")
+    
     df_paquetes = load_data("Paquetes")
     
     if not df_paquetes.empty:
-        # Calcular días restantes (Lógica de los 90 días)
+        # Lógica de vencimiento
         df_paquetes['Fecha_Compra'] = pd.to_datetime(df_paquetes['Fecha_Compra'])
-        df_paquetes['Vencimiento'] = df_paquetes['Fecha_Compra'] + timedelta(days=90)
+        df_paquetes['Fecha_Vencimiento'] = df_paquetes['Fecha_Compra'] + timedelta(days=90)
         
+        # Mostrar tabla con formato
         st.dataframe(df_paquetes, use_container_width=True)
     else:
-        st.warning("No hay paquetes registrados aún.")
+        st.warning("No hay paquetes registrados en el sistema.")
 
-# 3. AGENDA DIARIA (El Corazón del Sistema)
+# C. AGENDA DIARIA (La Regla de Oro)
 elif menu == "📅 Agenda Diaria":
-    st.header("Agenda de Citas y Cupos")
+    st.header("📅 Agenda de Turnos FISIOCARE")
     
-    # Mostrar citas del día
+    # Mostrar Agenda Actual
     df_agenda = load_data("Agenda")
-    st.subheader("Citas Programadas")
-    st.dataframe(df_agenda, use_container_width=True)
+    
+    col_ag, col_form = st.columns([2, 1])
+    
+    with col_ag:
+        st.subheader("Citas Programadas")
+        if not df_agenda.empty:
+            st.dataframe(df_agenda, use_container_width=True)
+        else:
+            st.write("No hay citas para mostrar.")
 
-    st.markdown("---")
-    st.subheader("🆕 Agendar Nueva Cita")
-
-    with st.form("form_cita"):
-        fecha_cita = st.date_input("Fecha de la cita", datetime.now())
-        hora_cita = st.time_input("Hora de la cita")
-        dni_pac = st.text_input("DNI del Paciente")
-        tipo_t = st.selectbox("Tipo de Terapia", ["Convencional", "Integral", "Inductivo", "Evaluación"])
-        
-        # Mapeo de colores según tipo de terapia
-        color_cita = "Amarillo" if tipo_t in ["Integral", "Inductivo"] else "Rojo" if tipo_t == "Evaluación" else "Verde"
-        
-        btn_agendar = st.form_submit_button("Verificar Cupos y Agendar")
-
-        if btn_agendar:
-            # --- REGLA DE ORO: LÓGICA DE CUPOS ---
-            # Filtramos las citas para esa fecha y hora
-            citas_bloque = df_agenda[(df_agenda['Fecha'] == str(fecha_cita)) & (df_agenda['Hora'] == str(hora_cita))]
+    with col_form:
+        st.subheader("📝 Agendar Cita")
+        with st.form("nueva_cita", clear_on_submit=True):
+            fecha = st.date_input("Fecha", datetime.now())
+            hora = st.selectbox("Hora", ["08:00", "09:00", "10:00", "11:00", "12:00", "15:00", "16:00", "17:00", "18:00"])
+            paciente = st.text_input("Nombre del Paciente")
+            terapia = st.selectbox("Tipo de Terapia", ["Convencional", "Integral/Inductivo", "Evaluación"])
             
-            amarillos_hoy = len(citas_bloque[citas_bloque['Color'] == "Amarillo"])
-            rojos_hoy = len(citas_bloque[citas_bloque['Color'] == "Rojo"])
-
-            if color_cita == "Amarillo" and amarillos_hoy >= 3:
-                st.error("🚫 ¡ALERTA! Ya existen 3 pacientes Amarillos en este horario. No se puede agendar más.")
-            elif color_cita == "Rojo" and rojos_hoy >= 2:
-                st.error("🚫 ¡ALERTA! Capacidad máxima de Evaluaciones (Rojo) alcanzada para este turno.")
-            else:
-                # Si pasa las reglas, se procedería a guardar
-                st.success(f"✅ Cupo disponible para cita {color_cita}. Registrando...")
-                # Lógica para guardar en Google Sheets aquí...
+            # Definir color según terapia
+            color_cita = "Amarillo" if terapia == "Integral/Inductivo" else "Rojo" if terapia == "Evaluación" else "Verde"
+            
+            check_cupo = st.form_submit_button("Verificar y Agendar")
+            
+            if check_cupo:
+                # --- REGLA DE ORO ---
+                # Filtrar citas en el mismo horario
+                citas_mismo_horario = df_agenda[(df_agenda['Fecha'] == str(fecha)) & (df_agenda['Hora'] == hora)]
+                
+                cont_amarillo = len(citas_mismo_horario[citas_mismo_horario['Color'] == "Amarillo"])
+                cont_rojo = len(citas_mismo_horario[citas_mismo_horario['Color'] == "Rojo"])
+                
+                if color_cita == "Amarillo" and cont_amarillo >= 3:
+                    st.error(f"🚫 CAPACIDAD MÁXIMA: Ya hay {cont_amarillo} pacientes AMARILLOS a las {hora}. Elija otro horario.")
+                elif color_cita == "Rojo" and cont_rojo >= 2:
+                    st.error(f"🚫 CAPACIDAD MÁXIMA: Ya hay {cont_rojo} EVALUACIONES (Rojo) a las {hora}.")
+                else:
+                    st.success(f"✅ Cupo disponible para cita {color_cita}. Procediendo a registrar...")
+                    # Aquí iría el conn.update para guardar en Google Sheets
