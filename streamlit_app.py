@@ -17,11 +17,10 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # Función para leer datos
 def load_data(sheet_name):
     try:
-        # Esto le dice a Streamlit que busque específicamente la pestaña
-        url = st.secrets["connections"]["gsheets"]["spreadsheet"]
-        sheet_url = f"{url}&gid={get_gid(sheet_name)}" # Un truco extra
+        # Usamos la conexión de Streamlit tal cual, sin trucos extras
         return conn.read(worksheet=sheet_name, ttl=0)
     except Exception as e:
+        # Si falla, nos dirá el error aquí
         st.sidebar.error(f"Error en {sheet_name}: {e}")
         return pd.DataFrame()
 
