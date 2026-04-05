@@ -17,13 +17,18 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # Función para leer datos
 def load_data(sheet_name):
     try:
-        # Intentamos leer la pestaña
+        # Esto le dice a Streamlit que busque específicamente la pestaña
+        url = st.secrets["connections"]["gsheets"]["spreadsheet"]
+        sheet_url = f"{url}&gid={get_gid(sheet_name)}" # Un truco extra
         return conn.read(worksheet=sheet_name, ttl=0)
     except Exception as e:
-        # ¡ESTO ES LO IMPORTANTE! Ahora nos dirá el error real en la barrita roja
-        st.sidebar.error(f"Error real en {sheet_name}: {e}")
+        st.sidebar.error(f"Error en {sheet_name}: {e}")
         return pd.DataFrame()
 
+# Añade esta funcioncita abajo de load_data para ayudar al sistema
+def get_gid(name):
+    gids = {"Agenda": "0", "Pacientes": "1942180802", "Paquetes": "12345678"} # El gid sale de la URL de cada pestaña
+    return gids.get(name, "0")
 # --- MENÚ LATERAL ---
 st.sidebar.image("https://via.placeholder.com/150", caption="FISIOCARE") # Aquí pondremos tu logo luego
 menu = st.sidebar.radio(
