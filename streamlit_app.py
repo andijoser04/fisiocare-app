@@ -4,21 +4,21 @@ import pandas as pd
 from datetime import datetime
 import os
 
-# 1. CONFIGURACIÓN DE ALTA GAMA
-st.set_page_config(page_title="FISIOCARE - Portal Médico", layout="wide", page_icon="🏥")
+# 1. CONFIGURACIÓN PROFESIONAL
+st.set_page_config(page_title="FISIOCARE - Sistema Integral", layout="wide", page_icon="🏥")
 
-# --- CSS PROFESIONAL (Estilo Antares/Moderno) ---
+# --- ESTILO VISUAL MODERNO (CSS) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
-    
     .main { background-color: #f0f4f8; font-family: 'Inter', sans-serif; }
     
-    /* Estilo de Tarjetas (Cards) */
-    .stApp div[data-testid="stVerticalBlock"] > div {
+    /* Tarjetas de Métricas */
+    div[data-testid="stMetric"] {
         background-color: white;
-        padding: 10px;
+        padding: 20px;
         border-radius: 15px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
     }
     
     /* Botones con degradado Fisiocare */
@@ -29,10 +29,9 @@ st.markdown("""
         color: white !important;
         font-weight: bold !important;
         border: none !important;
-        transition: 0.3s all;
+        height: 3em;
     }
-    .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,168,150,0.3); }
-
+    
     /* Sidebar */
     [data-testid="stSidebar"] { background-color: #028090; }
     [data-testid="stSidebar"] * { color: white !important; }
@@ -43,126 +42,143 @@ st.markdown("""
 conn = st.connection("gsheets", type=GSheetsConnection)
 
 def load_sheet(name):
-    try: return conn.read(worksheet=name, ttl=0).dropna(how='all')
-    except: return pd.DataFrame()
+    try:
+        df = conn.read(worksheet=name, ttl=0)
+        return df.dropna(how='all')
+    except:
+        return pd.DataFrame()
 
-def save_sheet(name, df):
-    conn.update(worksheet=name, data=df)
+def save_to_sheet(name, new_df):
+    existing = load_sheet(name)
+    updated = pd.concat([existing, new_df], ignore_index=True)
+    conn.update(worksheet=name, data=updated)
+    return True
 
-# 3. SIDEBAR Y LOGO
+# 3. INTERFAZ LATERAL
 LOGO_PATH = "logo.png"
 if os.path.exists(LOGO_PATH):
     st.sidebar.image(LOGO_PATH, width=150)
 else:
     st.sidebar.title("🏥 FISIOCARE")
 
-menu = st.sidebar.radio("MENÚ PRINCIPAL", ["🏠 Dashboard", "📅 Recepción", "🩺 Módulo Licenciados", "👤 Historial Clínico"])
+menu = st.sidebar.radio("MENÚ PRINCIPAL", ["🏠 Dashboard", "📅 Recepción y Citas", "🩺 Módulo Licenciados", "👤 Historias Clínicas"])
+
+# --- CARGA DE DATOS REALES PARA TODO EL SISTEMA ---
+df_agenda = load_sheet("Agenda")
+df_pacientes = load_sheet("Pacientes")
+df_precios = load_sheet("Precios")
+df_historias = load_sheet("Historias")
 
 # --- MÓDULOS ---
 
 if menu == "🏠 Dashboard":
-    st.title("Atención de Excelencia FISIOCARE")
-    st.markdown("##### Gestión Integral para una Recuperación Sostenible")
+    st.title("Panel de Control Real - FISIOCARE")
     
-    df_agenda = load_sheet("Agenda")
-    c1, c2, c3 = st.columns(3)
-    with c1: st.metric("Citas Hoy", len(df_agenda[df_agenda['Estado'] == 'Pendiente']) if not df_agenda.empty else 0)
-    with c2: st.metric("Terapeutas", "3 Activos")
-    with c3: st.metric("Pacientes Mes", "+12")
+    # MÉTRICAS DINÁMICAS (Aquí ya no hay datos falsos, Anderson)
+    hoy = str(datetime.now().date())
+    citas_hoy = len(df_agenda[df_agenda['Fecha'].astype(str) == hoy]) if not df_agenda.empty else 0
+    pacientes_total = len(df_pacientes) if not df_pacientes.empty else 0
+    atendidos_hoy = len(df_agenda[(df_agenda['Fecha'].astype(str) == hoy) & (df_agenda['Estado'] == 'Atendido')]) if not df_agenda.empty else 0
+    
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Citas para Hoy", citas_hoy)
+    col2.metric("Total Pacientes", pacientes_total)
+    col3.metric("Atenciones Listas", atendidos_hoy)
     
     st.markdown("---")
-    st.subheader("📌 Resumen de Agenda")
-    st.dataframe(df_agenda, use_container_width=True, hide_index=True)
+    st.subheader("📋 Vista Rápida de Agenda")
+    if not df_agenda.empty:
+        st.dataframe(df_agenda, use_container_width=True, hide_index=True)
+    else:
+        st.info("No hay registros en la Agenda todavía.")
 
-elif menu == "📅 Recepción":
-    st.header("📅 Gestión de Citas y Cobros")
-    df_precios = load_sheet("Precios")
-    df_pacientes = load_sheet("Pacientes")
+elif menu == "📅 Recepción y Citas":
+    st.header("📅 Registro de Citas y Cobros")
     
-    with st.expander("➕ Registrar Cita y Cobro", expanded=True):
-        with st.form("registro_cita"):
-            col1, col2 = st.columns(2)
-            fecha = col1.date_input("Fecha")
-            hora = col1.selectbox("Hora", ["08:00", "09:00", "10:00", "11:00", "15:00", "16:00", "17:00"])
+    with st.expander("➕ Nueva Cita", expanded=True):
+        with st.form("form_cita", clear_on_submit=True):
+            c1, c2 = st.columns(2)
+            f = c1.date_input("Fecha", datetime.now())
+            h = c1.selectbox("Hora", ["08:00", "09:00", "10:00", "11:00", "15:00", "16:00", "17:00"])
             
-            # Buscador de paciente por nombre (si existe en la base de datos)
-            lista_pacientes = df_pacientes['Nombre'].tolist() if not df_pacientes.empty else []
-            pac_nom = col2.selectbox("Paciente", ["Nuevo Paciente"] + lista_pacientes)
+            # Buscador de pacientes existentes
+            nombres_p = df_pacientes['Nombre'].tolist() if not df_pacientes.empty else []
+            pac_sel = c2.selectbox("Paciente", ["-- NUEVO --"] + nombres_p)
             
-            dni_val = ""
-            if pac_nom == "Nuevo Paciente":
-                pac_nom = col2.text_input("Nombre Completo")
-                dni_val = col2.text_input("DNI")
+            if pac_sel == "-- NUEVO --":
+                nom_final = c2.text_input("Nombre Completo")
+                dni_final = c2.text_input("DNI")
             else:
-                dni_val = df_pacientes[df_pacientes['Nombre'] == pac_nom]['DNI'].values[0]
-                col2.info(f"DNI: {dni_val}")
+                nom_final = pac_sel
+                dni_final = df_pacientes[df_pacientes['Nombre'] == pac_sel]['DNI'].values[0]
+                c2.info(f"DNI cargado: {dni_final}")
 
-            terapia = col1.selectbox("Tipo de Terapia", df_precios['Servicio'].tolist() if not df_precios.empty else ["Evaluación"])
-            licenciado = col2.selectbox("Asignar a:", ["Lic. Anderson", "Lic. Sofia", "Lic. Ricardo"])
+            terapia = c1.selectbox("Plan/Terapia", df_precios['Servicio'].tolist() if not df_precios.empty else ["Evaluación", "Integral", "Convencional"])
+            lic = c2.selectbox("Licenciado", ["Lic. Anderson", "Lic. Sofia", "Lic. Ricardo"])
             
-            # Cálculo de costo automático
-            costo = 0
-            if not df_precios.empty:
-                costo = df_precios[df_precios['Servicio'] == terapia]['Precio_Soles'].values[0]
+            # Cálculo de costo
+            costo_final = 0
+            if not df_precios.empty and terapia in df_precios['Servicio'].values:
+                costo_final = df_precios[df_precios['Servicio'] == terapia]['Precio_Soles'].values[0]
             
-            st.markdown(f"### 💰 Monto a cobrar: **S/. {costo}**")
+            st.markdown(f"### 💰 Monto a cobrar: S/. {costo_final}")
             
-            if st.form_submit_button("Confirmar y Cobrar"):
-                # Color según terapia (Regla de Oro)
+            if st.form_submit_button("Agendar y Registrar"):
+                # Color (Regla de Oro)
                 color = "Amarillo" if "Integral" in terapia else "Rojo" if "Evaluación" in terapia else "Verde"
                 
-                nueva_cita = pd.DataFrame([{
-                    "ID_Cita": datetime.now().strftime("%H%M%S"),
-                    "Fecha": str(fecha), "Hora": hora, "DNI_Paciente": dni_val,
-                    "Nombre_Paciente": pac_nom, "Terapia": terapia, "Licenciado": licenciado,
-                    "Estado": "Pendiente", "Costo": costo, "Color": color
+                nueva_fila = pd.DataFrame([{
+                    "ID_Cita": datetime.now().strftime("%d%m%H%M"),
+                    "Fecha": str(f), "Hora": h, "DNI_Paciente": dni_val if 'dni_val' in locals() else dni_final,
+                    "Nombre_Paciente": nom_final, "Tipo_Terapia": terapia, 
+                    "Color": color, "Licenciado": lic, "Estado": "Pendiente", "Costo": costo_final
                 }])
                 
-                # Guardamos y lanzamos animación
-                df_act = pd.concat([load_sheet("Agenda"), nueva_cita], ignore_index=True)
-                save_sheet("Agenda", df_act)
-                st.balloons()
-                st.success(f"✅ Cita registrada. Cobro de S/. {costo} confirmado.")
+                if save_to_sheet("Agenda", nueva_fila):
+                    st.success("✅ Cita guardada. ¡Revisa tu Excel!")
+                    st.balloons()
+                    st.rerun()
 
 elif menu == "🩺 Módulo Licenciados":
-    st.header("🩺 Área de Tratamiento")
-    lic_login = st.selectbox("Identifíquese Licenciado:", ["Lic. Anderson", "Lic. Sofia", "Lic. Ricardo"])
+    st.header("🩺 Módulo de Atención Médica")
+    lic_filtro = st.selectbox("Licenciado:", ["Lic. Anderson", "Lic. Sofia", "Lic. Ricardo"])
     
-    df_agenda = load_sheet("Agenda")
     if not df_agenda.empty:
-        mis_citas = df_agenda[(df_agenda['Licenciado'] == lic_login) & (df_agenda['Estado'] == "Pendiente")]
+        pendientes = df_agenda[(df_agenda['Licenciado'] == lic_filtro) & (df_agenda['Estado'] == 'Pendiente')]
         
-        if not mis_citas.empty:
-            for i, row in mis_citas.iterrows():
-                with st.expander(f"Atender a: {row['Nombre_Paciente']} - {row['Hora']}"):
-                    st.write(f"**Terapia:** {row['Terapia']}")
-                    eval_texto = st.text_area("Evaluación / Evolución del paciente", key=f"ev_{i}")
-                    plan_texto = st.text_area("Plan para la próxima sesión", key=f"pl_{i}")
+        if not pendientes.empty:
+            for i, row in pendientes.iterrows():
+                with st.expander(f"Paciente: {row['Nombre_Paciente']} - {row['Hora']}"):
+                    ev = st.text_area("Evolución de la sesión", key=f"ev_{i}")
+                    plan = st.text_area("Plan para la siguiente sesión", key=f"pl_{i}")
                     
-                    if st.button("Finalizar y Guardar Historia", key=f"btn_{i}"):
+                    if st.button("Finalizar Atención", key=f"btn_{i}"):
                         # 1. Guardar Historia
                         nueva_h = pd.DataFrame([{
                             "Fecha": str(datetime.now().date()), "DNI_Paciente": row['DNI_Paciente'],
-                            "Nombre_Paciente": row['Nombre_Paciente'], "Licenciado": lic_login,
-                            "Evaluacion": eval_texto, "Plan_Siguiente": plan_texto
+                            "Nombre_Paciente": row['Nombre_Paciente'], "Licenciado": lic_filtro,
+                            "Evaluacion": ev, "Plan_Siguiente": plan
                         }])
-                        df_h_act = pd.concat([load_sheet("Historias"), nueva_h], ignore_index=True)
-                        save_sheet("Historias", df_h_act)
+                        save_to_sheet("Historias", nueva_h)
                         
-                        # 2. Marcar como Atendido en Agenda
-                        df_agenda.at[i, 'Estado'] = "Atendido"
-                        save_sheet("Agenda", df_agenda)
+                        # 2. Actualizar Estado en Agenda
+                        # Nota: Actualizar una sola celda requiere sobreescribir la pestaña
+                        df_agenda.loc[i, 'Estado'] = 'Atendido'
+                        conn.update(worksheet="Agenda", data=df_agenda)
                         
-                        st.success("✅ Historia guardada. ¡Buen trabajo!")
+                        st.success("Historia Clínica guardada con éxito.")
                         st.rerun()
         else:
-            st.info("No tienes pacientes pendientes por ahora.")
+            st.info("No tienes citas pendientes para hoy.")
 
-elif menu == "👤 Historial Clínico":
-    st.header("👤 Buscador de Historias Clínicas")
-    df_h = load_sheet("Historias")
+elif menu == "👤 Historias Clínicas":
+    st.header("👤 Archivo de Historias Clínicas")
     busqueda = st.text_input("Buscar por Nombre o DNI:")
     
-    if busqueda and not df_h.empty:
-        res = df_h[df_h['Nombre_Paciente'].str.contains(busqueda, case=False) | df_h['DNI_Paciente'].astype(str).str.contains(busqueda)]
-        st.dataframe(res, use_container_width=True, hide_index=True)
+    if busqueda and not df_historias.empty:
+        # Filtro real
+        resultado = df_historias[df_historias['Nombre_Paciente'].str.contains(busqueda, case=False, na=False) | 
+                                 df_historias['DNI_Paciente'].astype(str).str.contains(busqueda)]
+        st.dataframe(resultado, use_container_width=True, hide_index=True)
+    elif not busqueda:
+        st.write("Ingresa un dato para buscar.")
