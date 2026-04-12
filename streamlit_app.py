@@ -3,7 +3,7 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 import os
-import base64 # <-- NUEVA LIBRERÍA NECESARIA
+import base64
 
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="FISIOCARE - Sistema Integral", layout="wide", page_icon="🏥")
@@ -21,27 +21,33 @@ if os.path.exists(video_file):
     video_base64 = get_base64_of_bin_file(video_file)
     video_html = f"""
         <style>
-        /* 1. Volvemos transparentes los fondos por defecto de Streamlit */
-        [data-testid="stAppViewContainer"] {{
-            background-color: transparent !important;
-        }}
-        [data-testid="stHeader"] {{
-            background-color: transparent !important;
-        }}
+        /* 1. ELIMINAR LOS FONDOS SÓLIDOS DE STREAMLIT (Cabecera y fondo principal) */
+        .stApp, 
+        [data-testid="stAppViewContainer"], 
+        [data-testid="stHeader"], 
         .main {{
             background: transparent !important;
+            background-color: transparent !important;
         }}
         
-        /* 2. Forzamos el video a pantalla completa absoluta */
+        /* 2. BARRA LATERAL TRANSPARENTE (Efecto Vidrio) */
+        [data-testid="stSidebar"], 
+        [data-testid="stSidebarContent"] {{
+            background: rgba(2, 128, 144, 0.15) !important; /* Un toque casi invisible del azul de Fisiocare */
+            backdrop-filter: blur(4px) !important; /* Desenfoca un poquito el video detrás para poder leer */
+            border-right: 1px solid rgba(255,255,255,0.1) !important;
+        }}
+
+        /* 3. VIDEO REY ABSOLUTO DE LA PANTALLA */
         #bgVideo {{
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            object-fit: cover; /* Asegura que el video llene toda la pantalla sin deformarse ni dejar bordes negros */
-            z-index: -999; /* Lo enviamos a la capa más profunda para que no bloquee los clics */
-            opacity: 0.3; /* Transparencia para que se lean bien los textos */
+            object-fit: cover;
+            z-index: -9999;
+            opacity: 0.35; /* Ajusta este número si quieres el video más claro o más oscuro */
         }}
         </style>
         <video autoplay muted loop id="bgVideo" playsinline>
@@ -52,11 +58,17 @@ if os.path.exists(video_file):
 else:
     st.warning(f"⚠️ Atención Ingeniero: No se encontró el archivo '{video_file}'")
 
+# --- ESTILOS DE LOS BOTONES Y TARJETAS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
     
-    /* Tarjetas Semi-transparentes (Glassmorphism) para que resalten sobre el video */
+    /* Textos del menú lateral siempre blancos para resaltar */
+    [data-testid="stSidebar"] * {
+        color: white !important;
+    }
+
+    /* Tarjetas Semi-transparentes (Glassmorphism) */
     .stApp div[data-testid="stVerticalBlock"] > div {
         background-color: rgba(255, 255, 255, 0.85);
         padding: 20px;
@@ -77,14 +89,13 @@ st.markdown("""
     }
     .stButton>button:hover { transform: scale(1.02); box-shadow: 0 10px 20px rgba(0,168,150,0.3); }
     
-    /* Botón de Eliminar (Rojo) */
     .btn-eliminar button {
         background: linear-gradient(135deg, #ff4b2b 0%, #ff416c 100%) !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# 2. CONEXIÓN Y FUNCIONES (AQUÍ SIGUE TU CÓDIGO NORMAL...)
+# 2. CONEXIÓN Y FUNCIONES (DEJA ESTA PARTE HACIA ABAJO EXACTAMENTE COMO LA TIENES)
 conn = st.connection("gsheets", type=GSheetsConnection)
 # ...
 
