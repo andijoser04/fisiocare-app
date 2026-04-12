@@ -3,60 +3,80 @@ from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from datetime import datetime
 import os
+import base64 # <-- NUEVA LIBRERÍA NECESARIA
 
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="FISIOCARE - Sistema Integral", layout="wide", page_icon="🏥")
 
+# --- FUNCIÓN MÁGICA PARA EL VIDEO ---
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
 # --- VIDEO DE FONDO Y ESTILOS AVANZADOS ---
 video_file = "videobackground.mp4"
-st.markdown(f"""
-    <style>
-    /* Video de Fondo */
-    #bgVideo {{
-        position: fixed;
-        right: 0;
-        bottom: 0;
-        min-width: 100%;
-        min-height: 100%;
-        z-index: -1;
-        opacity: 0.4; /* Ajusta la transparencia para leer bien */
-    }}
 
-    .main {{ background: transparent; }}
+# Verificamos que el video exista para que la app no explote si te equivocas de nombre
+if os.path.exists(video_file):
+    video_base64 = get_base64_of_bin_file(video_file)
+    video_html = f"""
+        <style>
+        #bgVideo {{
+            position: fixed;
+            right: 0;
+            bottom: 0;
+            min-width: 100%;
+            min-height: 100%;
+            z-index: -1;
+            opacity: 0.3; /* 0.3 para que no moleste a la vista */
+        }}
+        </style>
+        <video autoplay muted loop id="bgVideo">
+            <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+        </video>
+    """
+    st.markdown(video_html, unsafe_allow_html=True)
+else:
+    st.warning(f"⚠️ Atención Ingeniero: No se encontró el archivo '{video_file}'")
+
+st.markdown("""
+    <style>
+    .main { background: transparent; }
     
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
     
     /* Tarjetas Semi-transparentes (Glassmorphism) */
-    .stApp div[data-testid="stVerticalBlock"] > div {{
+    .stApp div[data-testid="stVerticalBlock"] > div {
         background-color: rgba(255, 255, 255, 0.85);
         padding: 20px;
         border-radius: 20px;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
         backdrop-filter: blur(4px);
         border: 1px solid rgba(255, 255, 255, 0.18);
-    }}
+    }
 
     /* Botones Premium */
-    .stButton>button {{
+    .stButton>button {
         border-radius: 25px !important;
         background: linear-gradient(135deg, #00a896 0%, #028090 100%) !important;
         color: white !important;
         font-weight: bold !important;
         border: none !important;
         transition: 0.3s all;
-    }}
-    .stButton>button:hover {{ transform: scale(1.02); box-shadow: 0 10px 20px rgba(0,168,150,0.3); }}
+    }
+    .stButton>button:hover { transform: scale(1.02); box-shadow: 0 10px 20px rgba(0,168,150,0.3); }
     
     /* Botón de Eliminar (Rojo) */
-    .btn-eliminar button {{
+    .btn-eliminar button {
         background: linear-gradient(135deg, #ff4b2b 0%, #ff416c 100%) !important;
-    }}
+    }
     </style>
-    
-    <video autoplay muted loop id="bgVideo">
-        <source src="{video_file}" type="video/mp4">
-    </video>
     """, unsafe_allow_html=True)
+
+# 2. CONEXIÓN Y FUNCIONES (AQUÍ SIGUE TU CÓDIGO NORMAL...)
+conn = st.connection("gsheets", type=GSheetsConnection)
+# ...
 
 # 2. CONEXIÓN Y FUNCIONES
 conn = st.connection("gsheets", type=GSheetsConnection)
