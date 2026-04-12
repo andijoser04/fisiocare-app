@@ -17,22 +17,34 @@ def get_base64_of_bin_file(bin_file):
 # --- VIDEO DE FONDO Y ESTILOS AVANZADOS ---
 video_file = "videobackground.mp4"
 
-# Verificamos que el video exista para que la app no explote si te equivocas de nombre
 if os.path.exists(video_file):
     video_base64 = get_base64_of_bin_file(video_file)
     video_html = f"""
         <style>
+        /* 1. Volvemos transparentes los fondos por defecto de Streamlit */
+        [data-testid="stAppViewContainer"] {{
+            background-color: transparent !important;
+        }}
+        [data-testid="stHeader"] {{
+            background-color: transparent !important;
+        }}
+        .main {{
+            background: transparent !important;
+        }}
+        
+        /* 2. Forzamos el video a pantalla completa absoluta */
         #bgVideo {{
             position: fixed;
-            right: 0;
-            bottom: 0;
-            min-width: 100%;
-            min-height: 100%;
-            z-index: -1;
-            opacity: 0.3; /* 0.3 para que no moleste a la vista */
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover; /* Asegura que el video llene toda la pantalla sin deformarse ni dejar bordes negros */
+            z-index: -999; /* Lo enviamos a la capa más profunda para que no bloquee los clics */
+            opacity: 0.3; /* Transparencia para que se lean bien los textos */
         }}
         </style>
-        <video autoplay muted loop id="bgVideo">
+        <video autoplay muted loop id="bgVideo" playsinline>
             <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
         </video>
     """
@@ -42,11 +54,9 @@ else:
 
 st.markdown("""
     <style>
-    .main { background: transparent; }
-    
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
     
-    /* Tarjetas Semi-transparentes (Glassmorphism) */
+    /* Tarjetas Semi-transparentes (Glassmorphism) para que resalten sobre el video */
     .stApp div[data-testid="stVerticalBlock"] > div {
         background-color: rgba(255, 255, 255, 0.85);
         padding: 20px;
