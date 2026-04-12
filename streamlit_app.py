@@ -21,33 +21,42 @@ if os.path.exists(video_file):
     video_base64 = get_base64_of_bin_file(video_file)
     video_html = f"""
         <style>
-        /* 1. ELIMINAR LOS FONDOS SÓLIDOS DE STREAMLIT (Cabecera y fondo principal) */
-        .stApp, 
-        [data-testid="stAppViewContainer"], 
-        [data-testid="stHeader"], 
+        /* 1. Volvemos transparentes los fondos de la página y la franja de arriba */
+        [data-testid="stAppViewContainer"] {{
+            background: transparent !important;
+        }}
+        [data-testid="stHeader"] {{
+            background: transparent !important;
+            height: 0px !important; /* Oculta la franja blanca de arriba */
+        }}
         .main {{
             background: transparent !important;
-            background-color: transparent !important;
         }}
         
-        /* 2. BARRA LATERAL TRANSPARENTE (Efecto Vidrio) */
-        [data-testid="stSidebar"], 
-        [data-testid="stSidebarContent"] {{
-            background: rgba(2, 128, 144, 0.15) !important; /* Un toque casi invisible del azul de Fisiocare */
-            backdrop-filter: blur(4px) !important; /* Desenfoca un poquito el video detrás para poder leer */
-            border-right: 1px solid rgba(255,255,255,0.1) !important;
+        /* 2. El Sidebar de Cristal (Deja ver el video pero permite leer) */
+        [data-testid="stSidebar"] {{
+            background-color: rgba(2, 128, 144, 0.25) !important; /* Súper transparente */
+            backdrop-filter: blur(8px) !important; /* Efecto vidrio empañado */
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }}
+        
+        /* 3. Letras del sidebar blindadas (Sombra negra para que resalten siempre) */
+        [data-testid="stSidebar"] * {{
+            color: #ffffff !important;
+            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.9) !important;
+            font-weight: 600 !important;
         }}
 
-        /* 3. VIDEO REY ABSOLUTO DE LA PANTALLA */
+        /* 4. El Video cubriendo el 100% real de la pantalla */
         #bgVideo {{
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            object-fit: cover;
-            z-index: -9999;
-            opacity: 0.35; /* Ajusta este número si quieres el video más claro o más oscuro */
+            object-fit: cover; 
+            z-index: -9999; /* Detrás de todo */
+            opacity: 0.45; /* Equilibrio perfecto de luz */
         }}
         </style>
         <video autoplay muted loop id="bgVideo" playsinline>
@@ -58,19 +67,13 @@ if os.path.exists(video_file):
 else:
     st.warning(f"⚠️ Atención Ingeniero: No se encontró el archivo '{video_file}'")
 
-# --- ESTILOS DE LOS BOTONES Y TARJETAS ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
     
-    /* Textos del menú lateral siempre blancos para resaltar */
-    [data-testid="stSidebar"] * {
-        color: white !important;
-    }
-
-    /* Tarjetas Semi-transparentes (Glassmorphism) */
+    /* Tarjetas principales semi-transparentes */
     .stApp div[data-testid="stVerticalBlock"] > div {
-        background-color: rgba(255, 255, 255, 0.85);
+        background-color: rgba(255, 255, 255, 0.85) !important;
         padding: 20px;
         border-radius: 20px;
         box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
@@ -89,6 +92,7 @@ st.markdown("""
     }
     .stButton>button:hover { transform: scale(1.02); box-shadow: 0 10px 20px rgba(0,168,150,0.3); }
     
+    /* Botón de Eliminar (Rojo) */
     .btn-eliminar button {
         background: linear-gradient(135deg, #ff4b2b 0%, #ff416c 100%) !important;
     }
