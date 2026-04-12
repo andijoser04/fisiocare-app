@@ -44,7 +44,7 @@ st.markdown(f"""
         font-weight: bold !important;
         border: none !important;
         transition: 0.3s all;
-    }
+    }}
     .stButton>button:hover {{ transform: scale(1.02); box-shadow: 0 10px 20px rgba(0,168,150,0.3); }}
     
     /* Botón de Eliminar (Rojo) */
