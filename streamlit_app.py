@@ -8,11 +8,10 @@ import base64
 # 1. CONFIGURACIÓN DE PÁGINA
 st.set_page_config(page_title="FISIOCARE - Portal Médico Premium", layout="wide", page_icon="🏥")
 
-# --- RECURSOS (URL DEL EXCEL - PEGA LA TUYA AQUÍ) ---
-# Esto evita el APIError al escribir
+# --- RECURSOS (URL DEL EXCEL) ---
 SPREADSHEET_URL = "https://docs.google.com/spreadsheets/d/1RYsepIDKxV0hOl5FWIymAZOwSwjeLSHUxWKOScrJkaU"
 
-# --- VIDEO DE FONDO Y ESTILOS AVANZADOS ---
+# --- VIDEO DE FONDO Y ESTILOS BLINDADOS ---
 def get_base64(bin_file):
     with open(bin_file, 'rb') as f:
         return base64.b64encode(f.read()).decode()
@@ -22,27 +21,76 @@ if os.path.exists(video_file):
     bin_str = get_base64(video_file)
     st.markdown(f"""
         <style>
-        [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {{ background: transparent !important; }}
+        /* 1. Volver transparente la raíz absoluta de Streamlit */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"], .main {{ 
+            background: transparent !important; 
+            background-color: transparent !important;
+        }}
+        [data-testid="stHeader"] {{ height: 0px !important; }}
+        
+        /* 2. El Panel Izquierdo (Sidebar) de Cristal */
         [data-testid="stSidebar"] {{
             background-color: rgba(2, 128, 144, 0.3) !important;
             backdrop-filter: blur(12px) !important;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
         }}
-        [data-testid="stSidebar"] * {{ color: white !important; text-shadow: 2px 2px 4px #000; font-weight: 600; }}
-        #bgVideo {{ position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; object-fit: cover; z-index: -999; opacity: 0.4; }}
-        .stApp div[data-testid="stVerticalBlock"] > div {{
-            background-color: rgba(255, 255, 255, 0.88) !important;
-            padding: 25px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        [data-testid="stSidebar"] * {{ 
+            color: white !important; 
+            text-shadow: 2px 2px 4px #000; 
+            font-weight: 600; 
         }}
-        .stButton>button {{
-            border-radius: 25px !important;
-            background: linear-gradient(135deg, #00a896 0%, #028090 100%) !important;
-            color: white !important; font-weight: bold !important; border: none !important;
+
+        /* 3. Contenedor Fijo del Video (Capa -1, no -9999) */
+        #video-container {{
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1; 
+        }}
+        
+        #bgVideo {{ 
+            width: 100%; 
+            height: 100%; 
+            object-fit: cover; 
+            opacity: 0.5; /* Subí un poco la intensidad para que se note más */
         }}
         </style>
-        <video autoplay muted loop id="bgVideo" playsinline>
-            <source src="data:video/mp4;base64,{bin_str}" type="video/mp4">
-        </video>
+        
+        <div id="video-container">
+            <video autoplay muted loop id="bgVideo" playsinline>
+                <source src="data:video/mp4;base64,{bin_str}" type="video/mp4">
+            </video>
+        </div>
     """, unsafe_allow_html=True)
+else:
+    st.warning("⚠️ No se encontró el video 'videobackground.mp4'. Verifica el nombre en GitHub.")
+
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
+    
+    /* Diseño de las Tarjetas de Contenido */
+    .stApp div[data-testid="stVerticalBlock"] > div {
+        background-color: rgba(255, 255, 255, 0.88) !important;
+        padding: 25px; 
+        border-radius: 20px; 
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    
+    /* Botones Premium */
+    .stButton>button {
+        border-radius: 25px !important;
+        background: linear-gradient(135deg, #00a896 0%, #028090 100%) !important;
+        color: white !important; 
+        font-weight: bold !important; 
+        border: none !important;
+        transition: 0.3s all;
+    }
+    .stButton>button:hover { transform: scale(1.02); }
+    </style>
+""", unsafe_allow_html=True)
 
 # 2. MOTOR DE DATOS
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -53,7 +101,6 @@ def load_sheet(name):
 
 def save_sheet(name, df):
     try:
-        # Forzamos la URL para evitar el APIError
         conn.update(worksheet=name, data=df, spreadsheet=SPREADSHEET_URL)
         return True
     except Exception as e:
@@ -114,7 +161,7 @@ elif menu == "📅 Recepción y Agenda":
             for _, r in hoy_data.iterrows():
                 if r['Hora'] in horas and r['Licenciado'] in licenciados:
                     grid.at[r['Hora'], r['Licenciado']] = f"👤 {r['Nombre_Paciente']}"
-        st.table(grid) # Formato tabla para que se vea como Excel
+        st.table(grid)
 
     with t2:
         with st.form("form_reg", clear_on_submit=True):
@@ -164,32 +211,32 @@ elif menu == "📅 Recepción y Agenda":
 elif menu == "🩺 Módulo Licenciados":
     st.header("🩺 Atención Médica")
     doc = st.selectbox("Licenciado:", licenciados)
-    pendientes = df_agenda[(df_agenda['Licenciado'] == doc) & (df_agenda['Estado'] == 'Pendiente')]
     
-    if not pendientes.empty:
-        for i, r in pendientes.iterrows():
-            with st.expander(f"Atender a: {r['Nombre_Paciente']} ({r['Hora']})"):
-                ev = st.text_area("Evolución de la sesión", key=f"ev_{i}")
-                pl = st.text_area("Plan siguiente", key=f"pl_{i}")
-                if st.button("Finalizar Atención", key=f"f_{i}"):
-                    # Guardar Historia
-                    hist = pd.DataFrame([{
-                        "Fecha": str(datetime.now().date()), "DNI": str(r['DNI']), 
-                        "Nombre": r['Nombre_Paciente'], "Licenciado": doc, "Evolucion": ev, "Plan": pl
-                    }])
-                    if save_sheet("Historias", pd.concat([df_historias, hist])):
-                        # Actualizar Agenda
-                        df_agenda.at[i, 'Estado'] = 'Atendido'
-                        save_sheet("Agenda", df_agenda)
-                        st.success("✅ Evolución guardada en el expediente.")
-                        st.rerun()
-    else: st.info("No hay pacientes pendientes.")
+    if not df_agenda.empty:
+        pendientes = df_agenda[(df_agenda['Licenciado'] == doc) & (df_agenda['Estado'] == 'Pendiente')]
+        
+        if not pendientes.empty:
+            for i, r in pendientes.iterrows():
+                with st.expander(f"Atender a: {r['Nombre_Paciente']} ({r['Hora']})"):
+                    ev = st.text_area("Evolución de la sesión", key=f"ev_{i}")
+                    pl = st.text_area("Plan siguiente", key=f"pl_{i}")
+                    if st.button("Finalizar Atención", key=f"f_{i}"):
+                        hist = pd.DataFrame([{
+                            "Fecha": str(datetime.now().date()), "DNI": str(r['DNI']), 
+                            "Nombre": r['Nombre_Paciente'], "Licenciado": doc, "Evolucion": ev, "Plan": pl
+                        }])
+                        if save_sheet("Historias", pd.concat([df_historias, hist])):
+                            df_agenda.at[i, 'Estado'] = 'Atendido'
+                            save_sheet("Agenda", df_agenda)
+                            st.success("✅ Evolución guardada en el expediente.")
+                            st.rerun()
+        else: st.info("No hay pacientes pendientes.")
+    else: st.info("Agenda vacía.")
 
 elif menu == "👤 Expedientes Clínicos":
     st.header("📂 Expediente Digital")
     busq = st.text_input("Buscar por Nombre o DNI:")
     if busq and not df_historias.empty:
-        # Filtro inteligente
         res = df_historias[df_historias['Nombre'].str.contains(busq, case=False, na=False) | 
                            df_historias['DNI'].astype(str).str.contains(busq)]
         if not res.empty:
